@@ -20,6 +20,7 @@
     name: detect(),
 
     init: function () {
+      if (window.__MARK) window.__MARK('площадка: ' + this.name);
       if (this.name === 'telegram') {
         safe(function () {
           var w = window.Telegram.WebApp;

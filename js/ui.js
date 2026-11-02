@@ -297,10 +297,12 @@
 
     /* хуки игры */
     Game.onHud(hudHook);
+    window.__MARK('ui: обработчики');
     Game.init();
+    window.__MARK('ui: движок');
     Game.setSound(Store.state.sound);
-
     show('start');
+    window.__MARK('ui: старт-экран показан');
   }
 
   window.UI = {

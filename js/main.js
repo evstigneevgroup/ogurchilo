@@ -2,6 +2,25 @@
 (function () {
   'use strict';
 
+  /* Режим ?diag=N: шаги загрузки рисуются плашками на экране —
+     способ поймать «тихие» зависания в вебвью площадок. */
+  function makeMark() {
+    var box = document.createElement('div');
+    box.style.cssText = 'position:absolute;top:60px;left:10px;right:10px;z-index:70';
+    document.body.appendChild(box);
+    window.__MARK = function (text) {
+      var d = document.createElement('div');
+      d.style.cssText = 'margin:6px 0;padding:8px 12px;border-radius:10px;background:#dfe9d0;color:#1d3a12;font:700 12px -apple-system,system-ui,sans-serif;white-space:pre-wrap';
+      d.textContent = '✓ ' + text;
+      box.appendChild(d);
+    };
+  }
+  if (location.search.indexOf('diag') !== -1) {
+    if (document.body) makeMark(); else document.addEventListener('DOMContentLoaded', makeMark);
+  } else {
+    window.__MARK = function () {};
+  }
+
   /* Видимая аварийная строка: в обёртках площадок (Telegram/VK/OK/Yandex)
      консоль недоступна — если игра падает, показываем текст прямо на экране. */
   function reportGameError(text) {
@@ -51,8 +70,11 @@
   window.addEventListener('touchstart', pressCapture, { capture: true, passive: true });
 
   function boot() {
+    window.__MARK('boot: площадка');
     Platform.init();
+    window.__MARK('boot: хранилище');
     Store.load();
+    window.__MARK('boot: интерфейс');
     UI.init();
     console.log('OGURCHILO: демо-прототип готов. Площадка: ' + Platform.name);
   }
