@@ -49,21 +49,23 @@
     reportGameError(msg + suffix);
   });
 
-  /* Диагностический уголок: показывает загрузку, каждый контакт с пальцем
-     (в фазе перехвата — видно даже если клик «съесть» какой-то слой)
-     и каждый подтверждённый клик. Помогает искать «молчащие» клики
-     в вебвью площадок, где консоль недоступна. */
+  /* Диагностический уголок: ТОЛЬКО при ?diag в адресе (режим отладки площадок).
+     Без него — не создаётся вовсе. */
   function makeDiag() {
     var d = document.createElement('div');
     d.id = 'diag';
     d.setAttribute('aria-hidden', 'true');
     document.body.appendChild(d);
   }
-  makeDiag();
-  window.__diag = function (text) {
-    var d = document.getElementById('diag');
-    if (d) d.textContent = text;
-  };
+  if (location.search.indexOf('diag') !== -1) {
+    if (document.body) makeDiag(); else document.addEventListener('DOMContentLoaded', makeDiag);
+    window.__diag = function (text) {
+      var d = document.getElementById('diag');
+      if (d) d.textContent = text;
+    };
+  } else {
+    window.__diag = function () {};
+  }
   window.__clicks = 0;
 
   function pressCapture(e) {
@@ -73,8 +75,10 @@
       window.__diag('контакт ' + e.type + ' → ' + label);
     } catch (err) { /* диагностика не должна ничего ломать */ }
   }
-  window.addEventListener('pointerdown', pressCapture, true);
-  window.addEventListener('touchstart', pressCapture, { capture: true, passive: true });
+  if (location.search.indexOf('diag') !== -1) {
+    window.addEventListener('pointerdown', pressCapture, true);
+    window.addEventListener('touchstart', pressCapture, { capture: true, passive: true });
+  }
 
   function boot() {
     window.__MARK('boot: площадка');
