@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#59b93c">
+<title>Огурчило</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; background:#f2eede; overflow:hidden; }
+  iframe { border:0; width:100%; height:100%; display:block; }
+  #fallback {
+    position:fixed; inset:0; display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:24px; gap:10px;
+    font-family:-apple-system,system-ui,sans-serif; color:#1d3a12;
+  }
+  #fallback .cuke { font-size:64px; }
+  #fallback a {
+    display:inline-block; background:#59b93c; color:#fffdf5; text-decoration:none;
+    font-weight:800; padding:12px 22px; border-radius:14px; margin-top:6px;
+  }
+  #fallback p { font-weight:600; color:#4a6b3a; font-size:14px; }
+</style>
+</head>
+<body>
+  <iframe id="game" src="index.html" title="Огурчило"></iframe>
+  <div id="fallback">
+    <div class="cuke">🥒</div>
+    <h2>Игра не открылась в этом окне</h2>
+    <p>Открой её в обычном браузере — там всё работает.</p>
+    <a href="index.html" target="_blank" rel="noopener">Открыть в браузере</a>
+  </div>
+  <script>
+    /* если iframe не просигналил о жизни за 12 секунд — показать запасной экран */
+    window.__gameAlive = false;
+    window.addEventListener('message', function (e) {
+      if (e && e.data === 'ogurchilo:alive') {
+        window.__gameAlive = true;
+        document.getElementById('fallback').style.display = 'none';
+      }
+    });
+    setTimeout(function () {
+      if (!window.__gameAlive) document.getElementById('fallback').style.display = 'flex';
+    }, 12000);
+  </script>
+</body>
+</html>

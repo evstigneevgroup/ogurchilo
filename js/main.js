@@ -2,6 +2,13 @@
 (function () {
   'use strict';
 
+  /* Сигнал жизни для обёртки shell.html (когда игра открыта в рамке) */
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage('ogurchilo:alive', '*');
+    }
+  } catch (e) { /* без обёртки — ничего не делаем */ }
+
   /* Режим ?diag=N: шаги загрузки рисуются плашками на экране —
      способ поймать «тихие» зависания в вебвью площадок. */
   function makeMark() {
