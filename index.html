@@ -3778,15 +3778,18 @@ body {
   pointer-events: none;
 }
 
-/* угловой диагностический хвост: загрузка, контакты и клики (см. main.js) */
+/* угловой диагностический хвост: ЗАМЕТНЫЙ, чтобы видеть судьбу каждого клика */
 #diag {
-  position: absolute; top: 2px; left: 6px; z-index: 60;
-  font-size: 10px; font-weight: 700; letter-spacing: .3px;
-  color: rgba(29, 58, 18, .5);
-  text-shadow: 0 1px 0 rgba(255, 253, 245, .8);
+  position: absolute; top: 0; left: 0; right: 0; z-index: 60;
+  background: rgba(29, 58, 18, .85); color: #fffdf5;
+  font: 700 12px/1.35 -apple-system, system-ui, sans-serif;
+  padding: 6px 10px; letter-spacing: .3px;
   pointer-events: none;
-  white-space: nowrap;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
+/* бейдж не должен перекрывать атрибут hidden */
+.badge[hidden] { display: none; }
 
 /* доступность: соблюаем системные настройки анимации */
 @media (prefers-reduced-motion: reduce) {
@@ -4842,7 +4845,11 @@ body {
   function wire(id, fn) {
     var node = document.getElementById(id);
     if (!node) { report('не найден элемент #' + id); return; }
-    node.addEventListener('click', function (ev) {
+    var lastFire = 0;
+    function fire(ev) {
+      var now = Date.now();
+      if (now - lastFire < 400) return; /* click + pointerup — это один клик */
+      lastFire = now;
       try {
         fn(ev);
         window.__clicks = (window.__clicks || 0) + 1;
@@ -4850,7 +4857,10 @@ body {
       } catch (e) {
         report('клик по «' + id + '»: ' + ((e && e.message) || String(e)));
       }
-    });
+    }
+    node.addEventListener('click', fire);
+    /* страховка для вебвью, где click не синтезируется из тапа */
+    node.addEventListener('pointerup', fire);
   }
 
   /* ---------- навигация ---------- */
@@ -5146,6 +5156,13 @@ body {
 /* main.js — точка входа. Порядок: площадка -> хранилище -> UI */
 (function () {
   'use strict';
+
+  /* Сигнал жизни для обёртки shell.html (когда игра открыта в рамке) */
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage('ogurchilo:alive', '*');
+    }
+  } catch (e) { /* без обёртки — ничего не делаем */ }
 
   /* Режим ?diag=N: шаги загрузки рисуются плашками на экране —
      способ поймать «тихие» зависания в вебвью площадок. */

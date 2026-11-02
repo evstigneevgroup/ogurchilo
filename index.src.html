@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#59b93c">
+  <title>Огурчило — чисти огурец со скоростью рук</title>
+  <!-- SDK Telegram локально: страница не зависит от доступности telegram.org из вебвью -->
+  <script src="js/telegram-web-app.js"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥒</text></svg>">
+  <link rel="stylesheet" href="css/style.css?v=4">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ЭКРАН: главное меню -->
+    <section class="screen active" id="screen-start">
+      <div class="start-inner">
+        <div class="logo-badge">🥒</div>
+        <h1 class="title">ОГУРЧИЛО</h1>
+        <p class="subtitle">Тапай — рука чистит огурец.<br>Кто быстрее, тот и с промиком.</p>
+        <div class="start-stats">
+          <div class="stat"><span class="stat-val" id="stat-best">0</span><span class="stat-cap">рекорд</span></div>
+          <div class="stat"><span class="stat-val" id="stat-cukes">0</span><span class="stat-cap">огурцов всего</span></div>
+        </div>
+        <button class="btn btn-primary btn-big" id="btn-play">ИГРАТЬ · 30 СЕК</button>
+        <div class="start-row">
+          <button class="btn btn-ghost" id="btn-leaders">🏆 Лидеры</button>
+          <button class="btn btn-ghost" id="btn-prizes">🎁 Призы <span class="badge" id="badge-prizes" hidden>1</span></button>
+          <button class="btn btn-ghost btn-icon" id="btn-sound" aria-label="Звук">🔊</button>
+        </div>
+        <p class="hint">Демо-прототип: соперники и призы генерируются локально.</p>
+      </div>
+    </section>
+
+    <!-- ЭКРАН: игра -->
+    <section class="screen" id="screen-game">
+      <canvas id="game-canvas"></canvas>
+      <div class="hud">
+        <div class="hud-box"><span class="hud-cap">очки</span><span id="hud-score">0</span></div>
+        <div class="hud-box hud-timer" id="hud-timer">30</div>
+        <button class="hud-btn" id="btn-pause" aria-label="Пауза">⏸</button>
+      </div>
+      <div class="combo" id="combo-box" hidden>
+        <div class="combo-fill" id="combo-fill"></div>
+        <span id="combo-label">КОМБО ×1</span>
+      </div>
+      <div class="tap-tip">ТАПАЙ 🥒</div>
+    </section>
+
+    <!-- ЭКРАН: рейтинг -->
+    <section class="screen" id="screen-leaders">
+      <header class="page-head">
+        <button class="btn-back" id="btn-back-leaders" aria-label="Назад">←</button>
+        <h2>Рейтинг</h2>
+      </header>
+      <div class="tabs">
+        <button class="tab active" id="tab-friends">Друзья</button>
+        <button class="tab" id="tab-random">Соперники</button>
+      </div>
+      <div class="lb-list" id="leaders-list"></div>
+      <p class="note" id="leaders-note"></p>
+    </section>
+
+    <!-- ЭКРАН: призы -->
+    <section class="screen" id="screen-prizes">
+      <header class="page-head">
+        <button class="btn-back" id="btn-back-prizes" aria-label="Назад">←</button>
+        <h2>Призы</h2>
+      </header>
+      <div class="prize-progress">
+        <p id="prizes-progress"></p>
+        <div class="bar"><div class="bar-fill" id="prizes-bar"></div></div>
+      </div>
+      <div class="prizes" id="prizes-list"></div>
+      <p class="note">Демо: промокоды вымышленные. На проде коды выдаёт партнёрская сеть через бэкенд.</p>
+    </section>
+
+    <!-- ОВЕРЛЕЙ: результат раунда -->
+    <div class="overlay" id="overlay-result">
+      <div class="panel">
+        <h2>Время вышло!</h2>
+        <div class="res-grid">
+          <div class="res-item"><span class="res-val" id="res-cukes">0</span><span class="res-cap">огурцов</span></div>
+          <div class="res-item"><span class="res-val" id="res-score">0</span><span class="res-cap">очков</span></div>
+        </div>
+        <p class="res-best" id="res-best"></p>
+        <p class="res-rank" id="res-rank"></p>
+        <div class="lb-list mini" id="res-mini"></div>
+        <div class="panel-row">
+          <button class="btn btn-primary" id="btn-again">Ещё раз</button>
+          <button class="btn btn-ghost" id="btn-share">Поделиться</button>
+        </div>
+        <button class="btn btn-ghost btn-wide" id="btn-res-prizes">🎁 Мои призы</button>
+      </div>
+    </div>
+
+    <!-- ОВЕРЛЕЙ: пауза -->
+    <div class="overlay" id="overlay-pause">
+      <div class="panel">
+        <h2>Пауза</h2>
+        <div class="panel-col">
+          <button class="btn btn-primary btn-wide" id="btn-resume">Продолжить</button>
+          <button class="btn btn-ghost btn-wide" id="btn-quit">Выйти в меню</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- МОДАЛКА -->
+    <div class="overlay" id="modal">
+      <div class="panel">
+        <h3 id="modal-title"></h3>
+        <p id="modal-body"></p>
+        <button class="btn btn-primary btn-wide" id="modal-btn">Ясно</button>
+      </div>
+    </div>
+
+    <div id="toast" role="status"></div>
+  </div>
+
+  <script src="js/platform.js?v=4"></script>
+  <script src="js/storage.js?v=4"></script>
+  <script src="js/leaderboards.js?v=4"></script>
+  <script src="js/prizes.js?v=4"></script>
+  <script src="js/game.js?v=4"></script>
+  <script src="js/ui.js?v=4"></script>
+  <script src="js/main.js?v=4"></script>
+</body>
+</html>

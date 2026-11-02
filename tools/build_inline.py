@@ -17,8 +17,10 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def main() -> int:
+    """Читает исходник index.src.html (многофайловый) и пишет index.html (один файл)."""
+    src_path = ROOT / "index.src.html"
     html_path = ROOT / "index.html"
-    html = html_path.read_text(encoding="utf-8")
+    html = src_path.read_text(encoding="utf-8")
     original = html
 
     # CSS: <link rel="stylesheet" href="css/style.css??v=N">
@@ -50,7 +52,7 @@ def main() -> int:
         return 1
 
     html_path.write_text(html, encoding="utf-8")
-    print("OK: index.html пересобран в один файл")
+    print("OK: index.html пересобран из index.src.html в один файл")
     print("  размер: %d -> %d байт" % (len(original), len(html)))
     return 0
 
