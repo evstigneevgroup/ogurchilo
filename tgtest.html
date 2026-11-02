@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#59b93c">
+  <title>Диагностика — Огурчило</title>
+  <style>
+    body { margin: 0; background: #fffdf5; font-family: -apple-system, system-ui, sans-serif; }
+    #log { padding: 18px; }
+    .bar { margin: 10px 0; padding: 12px 14px; border-radius: 12px; color: #1d3a12; font-weight: 800; font-size: 15px; }
+    h1 { font-size: 18px; padding: 18px 18px 0; }
+    p { padding: 0 18px; color: #4a6b3a; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Диагностика окружения</h1>
+  <p>Каждый пройденный этап — цветная плашка. Тапни по экрану, чтобы сработал последний тест.</p>
+  <div id="log"></div>
+
+  <script>
+    var log = document.getElementById('log');
+    function mark(text, color) {
+      var d = document.createElement('div');
+      d.className = 'bar';
+      d.style.background = color;
+      d.textContent = text;
+      log.appendChild(d);
+    }
+    window.onerror = function (m, s, l) {
+      mark('ОШИБКА: ' + m + ' (' + (s || '').split('/').pop() + ':' + l + ')', '#ffb0a0');
+    };
+    mark('1 · HTML отрисован', '#ffe9a8');
+  </script>
+
+  <script src="js/telegram-web-app.js"></script>
+
+  <script>
+    var W = null;
+    try {
+      W = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+      mark('2 · SDK: ' + (W ? 'подключён (v' + (W.version || '?') + ')' : 'НЕ найден'), W ? '#a8ffcf' : '#ffd0a0');
+    } catch (e) {
+      mark('2 · SDK упал: ' + e, '#ffb0a0');
+    }
+
+    try {
+      if (W) {
+        W.ready();
+        W.expand();
+        if (W.setHeaderColor) W.setHeaderColor('#59b93c');
+        if (W.setBackgroundColor) W.setBackgroundColor('#59b93c');
+        mark('3 · SDK init ok (initData: ' + String(W.initData || '').length + ' симв.)', '#a8c8ff');
+      }
+    } catch (e) {
+      mark('3 · init упал: ' + e, '#ffb0a0');
+    }
+
+    try {
+      requestAnimationFrame(function () {
+        mark('4 · rAF тик есть', '#ffd0f0');
+      });
+    } catch (e) {
+      mark('4 · rAF недоступен: ' + e, '#ffb0a0');
+    }
+
+    try {
+      setTimeout(function () {
+        mark('5 · setTimeout жив', '#c8dcff');
+      }, 400);
+    } catch (e) {
+      mark('5 · таймер недоступен: ' + e, '#ffb0a0');
+    }
+
+    try {
+      localStorage.setItem('tgtest', '1');
+      var ok = localStorage.getItem('tgtest') === '1';
+      mark('6 · localStorage: ' + (ok ? 'работает' : 'не читается'), '#e8c8ff');
+    } catch (e) {
+      mark('6 · localStorage ЗАБЛОКИРОВАН: ' + e, '#ffb0a0');
+    }
+
+    try {
+      var c = document.createElement('canvas');
+      c.width = 8; c.height = 8;
+      var cx = c.getContext('2d');
+      cx.fillStyle = '#59b93c';
+      cx.fillRect(0, 0, 8, 8);
+      var px = cx.getImageData(0, 0, 1, 1).data;
+      mark('7 · canvas 2d: ' + (px[0] === 89 ? 'рисует и читает пиксели' : 'рисует, пиксели ' + Array.prototype.join.call(px)), '#c8ffe8');
+    } catch (e) {
+      mark('7 · canvas 2d упал: ' + e, '#ffb0a0');
+    }
+
+    document.addEventListener('pointerdown', function (ev) {
+      try {
+        var d = document.createElement('div');
+        d.className = 'bar';
+        d.style.background = '#a8e8ff';
+        d.textContent = '8 · tap пойман: ' + ev.type;
+        log.appendChild(d);
+      } catch (e) {}
+    }, { capture: true, passive: true });
+
+    window.addEventListener('load', function () {
+      try {
+        mark('9 · window.load достигнут', '#c8ffd0');
+      } catch (e) {}
+    });
+  </script>
+</body>
+</html>
