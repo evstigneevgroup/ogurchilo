@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#59b93c">
+<title>Пульт диагностики — Огурчило</title>
+<style>
+  body { margin:0; background:#fffdf5; font-family:-apple-system,system-ui,sans-serif; color:#1d3a12; }
+  h1 { font-size:17px; margin:0; padding:12px 14px 0; }
+  p { margin:4px 0 0; padding:0 14px 8px; color:#4a6b3a; font-weight:600; font-size:13px; }
+  #board { position:fixed; top:0; left:0; right:0; z-index:2; background:#fffdf5; padding-bottom:6px; border-bottom:2px solid #dfe9d0; }
+  #btns { display:flex; gap:6px; padding:4px 14px; flex-wrap:wrap; }
+  button { font:800 13px -apple-system,system-ui,sans-serif; border:0; border-radius:10px; padding:9px 10px; cursor:pointer; background:#e7e2cd; color:#1d3a12; }
+  button.on { background:#59b93c; color:#fffdf5; }
+  #res { padding:4px 14px 6px; font:800 13px -apple-system,system-ui,sans-serif; min-height:20px; }
+  .chip { display:inline-block; margin:2px 4px 2px 0; padding:3px 8px; border-radius:8px; }
+  .ok { background:#c8ffd0; }
+  .bad { background:#ffb0a0; }
+  iframe { position:fixed; top:0; left:0; border:0; width:100vw; height:100vh; display:none; }
+  iframe.vis { display:block; }
+</style>
+</head>
+<body>
+<div id="board">
+  <h1>Пульт: этапы 1 → 5</h1>
+  <p>Нажимай по порядку. Каждый открывает свой слой страницы в рамке на экране; плашки внутри показывают глубину.</p>
+  <div id="btns"></div>
+  <div id="res"></div>
+</div>
+<iframe id="frame" title="этап"></iframe>
+
+<script>
+var STAGES = [
+  { n: 1, label: '1 · CSS',        color: '#ffe9c8' },
+  { n: 2, label: '2 · +SDK',       color: '#a8ffcf' },
+  { n: 3, label: '3 · +модули',    color: '#c8ffd0' },
+  { n: 4, label: '4 · +движок',    color: '#b8e0ff' },
+  { n: 5, label: '5 · полный boot', color: '#ffd0e0' }
+];
+var btns = document.getElementById('btns');
+var res = document.getElementById('res');
+var frame = document.getElementById('frame');
+var chips = {};
+
+STAGES.forEach(function (s) {
+  var b = document.createElement('button');
+  b.textContent = s.label;
+  b.id = 'btn' + s.n;
+  b.addEventListener('click', function () { openStage(s.n, s); });
+  btns.appendChild(b);
+  var chip = document.createElement('span');
+  chip.className = 'chip';
+  chip.style.background = '#e7e2cd';
+  chip.textContent = s.label + ' · жми…';
+  res.appendChild(chip);
+  chips[s.n] = chip;
+});
+
+var timer = null;
+function openStage(n, s) {
+  Array.prototype.forEach.call(document.querySelectorAll('button'), function (b) { b.classList.remove('on'); });
+  document.getElementById('btn' + n).classList.add('on');
+  chips[n].textContent = s.label + ' · грузится…';
+  chips[n].style.background = '#ffe9c8';
+  frame.classList.add('vis');
+  frame.src = 'stage' + n + '.html?nc=' + Date.now();
+  clearTimeout(timer);
+  timer = setTimeout(function () {
+    chips[n].textContent = s.label + ' · load НЕ наступил за 8 с';
+    chips[n].style.background = '#ffb0a0';
+  }, 8000);
+}
+frame.addEventListener('load', function () {
+  var src = (frame.getAttribute('src') || '');
+  var m = src.match(/stage(\d)/);
+  if (!m) return;
+  var n = parseInt(m[1], 10);
+  var s = STAGES[n - 1];
+  clearTimeout(timer);
+  chips[n].textContent = s.label + ' · load ✓';
+  chips[n].style.background = '#c8ffd0';
+});
+</script>
+</body>
+</html>
