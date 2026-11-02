@@ -14,7 +14,11 @@
   function wire(id, fn) {
     var node = document.getElementById(id);
     if (!node) { report('не найден элемент #' + id); return; }
-    node.addEventListener('click', function (ev) {
+    var lastFire = 0;
+    function fire(ev) {
+      var now = Date.now();
+      if (now - lastFire < 400) return; /* click + pointerup — это один клик */
+      lastFire = now;
       try {
         fn(ev);
         window.__clicks = (window.__clicks || 0) + 1;
@@ -22,7 +26,10 @@
       } catch (e) {
         report('клик по «' + id + '»: ' + ((e && e.message) || String(e)));
       }
-    });
+    }
+    node.addEventListener('click', fire);
+    /* страховка для вебвью, где click не синтезируется из тапа */
+    node.addEventListener('pointerup', fire);
   }
 
   /* ---------- навигация ---------- */
