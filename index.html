@@ -4306,10 +4306,13 @@ body {
   /* ---------- геометрия ---------- */
   function layout() {
     if (!canvas || !ctx) return;
-    /* экран игры может быть скрыт (display:none): тогда размеров нет — ждём показ */
-    if (!canvas.clientWidth || !canvas.clientHeight) return;
+    /* экран игры может быть скрыт (display:none): тогда размеров нет — ждём показ.
+       Но если размеры всё же нулевые (особенности вебвью) — берём окно целиком,
+       чтобы геометрия никогда не оставалась нулевой. */
+    var cw = canvas.clientWidth || window.innerWidth || 320;
+    var ch = canvas.clientHeight || window.innerHeight || 480;
     DPR = Math.min(window.devicePixelRatio || 1, 2);
-    W = canvas.clientWidth; H = canvas.clientHeight;
+    W = cw; H = ch;
     canvas.width = Math.round(W * DPR);
     canvas.height = Math.round(H * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -4500,6 +4503,9 @@ body {
   function drawCucumber() {
     var x0 = geo.cx - geo.w / 2, y0 = geo.top, w = geo.w, h = geo.h;
     var t = performance.now() / 1000;
+
+    /* страховка от нулевой геометрии: любой цикл с шагом 0 зависает намертво */
+    if (!(w > 0) || !(h > 0)) return;
 
     ctx.save();
     /* squash при тапе */
