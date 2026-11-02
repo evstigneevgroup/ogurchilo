@@ -1,0 +1,14 @@
+# Netlify: статика без сборки
+[build]
+  publish = "."
+
+# Корневая ссылка -> index.html (и так по умолчанию), но кэш для статики
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
