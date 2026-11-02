@@ -6,6 +6,25 @@
 
   function q(id) { return document.getElementById(id); }
 
+  /* носитель ошибок на экран (main.js переопределяет) */
+  var report = window.reportGameError || function (t) { if (window.console) console.error(t); };
+
+  /* навешивание кликов: обработчик в try/catch — любая ошибка видна на экране,
+     а угловой диагностический хвост (main.js) показывает подтверждённый клик */
+  function wire(id, fn) {
+    var node = document.getElementById(id);
+    if (!node) { report('не найден элемент #' + id); return; }
+    node.addEventListener('click', function (ev) {
+      try {
+        fn(ev);
+        window.__clicks = (window.__clicks || 0) + 1;
+        window.__diag('кнопка ✓ ' + id + ' · клик ' + window.__clicks);
+      } catch (e) {
+        report('клик по «' + id + '»: ' + ((e && e.message) || String(e)));
+      }
+    });
+  }
+
   /* ---------- навигация ---------- */
   var current = 'start';
 
@@ -227,49 +246,49 @@
       toast: q('toast')
     };
 
-    /* кнопки */
-    q('btn-play').addEventListener('click', function () { show('game'); Game.start(); });
-    q('btn-leaders').addEventListener('click', function () { show('leaders'); });
-    q('btn-prizes').addEventListener('click', function () { show('prizes'); });
-    q('btn-sound').addEventListener('click', function () {
+    /* кнопки: через wire — ошибка клика всплывает на экран, не в недоступную консоль */
+    wire('btn-play', function () { show('game'); Game.start(); });
+    wire('btn-leaders', function () { show('leaders'); });
+    wire('btn-prizes', function () { show('prizes'); });
+    wire('btn-sound', function () {
       Store.state.sound = !Store.state.sound;
       Store.save();
       Game.setSound(Store.state.sound);
       el.btnSound.textContent = Store.state.sound ? '🔊' : '🔇';
       Platform.haptic('light');
     });
-    q('btn-back-leaders').addEventListener('click', function () { show('start'); });
-    q('btn-back-prizes').addEventListener('click', function () { show('start'); });
-    el.tabFriends.addEventListener('click', function () { renderLeaders('friends'); });
-    el.tabRandom.addEventListener('click', function () { renderLeaders('random'); });
+    wire('btn-back-leaders', function () { show('start'); });
+    wire('btn-back-prizes', function () { show('start'); });
+    wire('tab-friends', function () { renderLeaders('friends'); });
+    wire('tab-random', function () { renderLeaders('random'); });
 
-    q('btn-pause').addEventListener('click', function () {
+    wire('btn-pause', function () {
       Game.pause();
       q('overlay-pause').classList.add('show');
     });
-    q('btn-resume').addEventListener('click', function () {
+    wire('btn-resume', function () {
       q('overlay-pause').classList.remove('show');
       Game.resume();
     });
-    q('btn-quit').addEventListener('click', function () {
+    wire('btn-quit', function () {
       q('overlay-pause').classList.remove('show');
       Game.toIdle();
       show('start');
     });
 
-    q('btn-again').addEventListener('click', function () {
+    wire('btn-again', function () {
       el.overlayResult.classList.remove('show');
       Game.start();
     });
-    q('btn-share').addEventListener('click', shareResult);
-    q('btn-res-prizes').addEventListener('click', function () {
+    wire('btn-share', shareResult);
+    wire('btn-res-prizes', function () {
       el.overlayResult.classList.remove('show');
       show('prizes');
     });
 
-    q('modal-btn').addEventListener('click', function () { el.modal.classList.remove('show'); });
+    wire('modal-btn', function () { el.modal.classList.remove('show'); });
 
-    el.prizesList.addEventListener('click', function (e) {
+    wire('prizes-list', function (e) {
       var claim = e.target.closest ? e.target.closest('[data-claim]') : null;
       if (claim) { claimPrize(claim.getAttribute('data-claim')); return; }
       var copy = e.target.closest ? e.target.closest('[data-copy]') : null;
