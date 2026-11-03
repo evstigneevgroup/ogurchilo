@@ -115,6 +115,9 @@
     var st = Prizes.statuses(store.totalCukes, store.claimed);
     var pr = Prizes.progress(store.totalCukes);
     var inTG = window.Telegram && window.Telegram.WebApp;
+    /* в Telegram статус «выдан» знает только бот (один код на игрока он держит сам):
+       показываем кнопки «Забрать» для всех достигнутых — повторный клик вернёт твой код */
+    if (inTG) st = Prizes.statuses(store.totalCukes, {});
     if (el.prizesNote) {
       el.prizesNote.textContent = inTG
         ? 'Промокод приходит личным сообщением от бота @ogurchilo_bot после нажатия «Забрать».'
@@ -173,15 +176,14 @@
     var p = Prizes.byId(id);
     if (!p) return;
     var tg = window.Telegram && window.Telegram.WebApp;
-    if (tg && typeof tg.sendData === 'function') {
-      /* в Telegram: заявка уходит боту, он пришлёт код в чат (мини-апп закроется) */
+    if (tg && tg.openTelegramLink && Platform.inTG()) {
+      /* sendData не работает из menu-button — открываем чат бота глубокой ссылкой:
+         бот получит /start claim_<приз>_<огурцов> и пришлёт код сообщением */
       try {
-        tg.sendData(JSON.stringify({ action: 'claim', prize: id }));
-        Store.state.claimed[id] = true;
-        Store.save();
-        cloudSyncToTG();
+        tg.openTelegramLink('https://t.me/ogurchilo_bot?start=claim_' + encodeURIComponent(id) + '_' + (Store.state.totalCukes || 0));
+        toast('Открываю чат бота — код придёт сообщением!');
       } catch (e) {
-        report('sendData: ' + ((e && e.message) || String(e)));
+        report('claim link: ' + ((e && e.message) || String(e)));
         demoClaim(p);
       }
       return;

@@ -105,6 +105,12 @@ def handle_update(u: dict) -> None:
     username = from_user.get("username") or from_user.get("first_name") or "огурчанин"
 
     text = msg.get("text") or ""
+    if text.startswith("/start claim_"):
+        # глубокая ссылка из мини-аппа: /start claim_<prize>_<cukes>
+        payload = text.split(" ", 1)[1]
+        prize_id = payload.replace("claim_", "").split("_")[0]
+        handle_claim(user_id, chat_id, username, prize_id)
+        return
     if text.startswith("/start"):
         send_text(chat_id, "🥒 <b>Огурчило</b> — ты на базе!\n\n"
                            "Чисти огурцы в мини-приложении (кнопка «Играть» внизу), "
