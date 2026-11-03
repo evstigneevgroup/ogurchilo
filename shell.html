@@ -23,7 +23,7 @@
 </style>
 </head>
 <body>
-  <iframe id="game" src="index.html?v=4" title="Огурчило"></iframe>
+  <iframe id="game" title="Огурчило"></iframe>
   <div id="fallback">
     <div class="cuke">🥒</div>
     <h2>Игра не открылась в этом окне</h2>
@@ -42,6 +42,8 @@
     setTimeout(function () {
       if (!window.__gameAlive) document.getElementById('fallback').style.display = 'flex';
     }, 12000);
+    /* игра грузится всегда свежей: cache-buster не даёт вебвью держать старую версию */
+    document.getElementById('game').src = 'index.html?nc=' + Date.now();
   </script>
 </body>
 </html>
