@@ -3739,11 +3739,11 @@ body {
 .overlay.show { display: flex; }
 
 .panel {
-  width: min(360px, 100%);
+  width: min(340px, calc(100% - 56px));   /* мёртвые зоны по краям: случайный тап мимо кнопок */
   background: var(--card); border-radius: 22px;
   padding: 20px; text-align: center;
   display: flex; flex-direction: column; gap: 12px;
-  max-height: 88vh; overflow-y: auto;
+  max-height: 84vh; overflow-y: auto;
   box-shadow: 0 12px 30px rgba(18, 44, 8, .3);
   animation: pop .18s ease;
 }
@@ -3760,6 +3760,7 @@ body {
 .res-val { font-size: 34px; font-weight: 900; color: var(--accent-dark); }
 .res-cap { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); }
 .res-best { color: var(--gold); font-weight: 800; }
+.tap-guard { height: env(safe-area-inset-bottom, 0px); min-height: 2px; }
 .res-title { color: var(--accent-dark); font-weight: 800; }
 
 /* титул и ежедневка на старте */
@@ -3915,6 +3916,7 @@ body {
           <button class="btn btn-ghost" id="btn-share">Поделиться</button>
         </div>
         <button class="btn btn-ghost btn-wide" id="btn-res-prizes">🎁 Мои призы</button>
+        <div class="tap-guard"></div>
       </div>
     </div>
 
