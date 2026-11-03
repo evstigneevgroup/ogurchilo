@@ -51,7 +51,11 @@
 
   function hudHook(h) {
     var t = Math.ceil(h.tLeft);
-    if (t !== lastHud.t) { el.hudTimer.textContent = t; lastHud.t = t; }
+    if (t !== lastHud.t) {
+      el.hudTimer.textContent = t;
+      el.hudTimer.classList.toggle('danger', h.mode === 'play' && t <= 5);
+      lastHud.t = t;
+    }
     if (h.score !== lastHud.s) { el.hudScore.textContent = h.score; lastHud.s = h.score; }
     if (h.combo !== lastHud.combo) {
       if (h.combo >= 2) {
@@ -271,8 +275,9 @@
     var st = Prizes.statuses(store.totalCukes, store.claimed);
     var freshReady = st.filter(function (p) { return p.state === 'ready'; }).length;
 
-    el.resScore.textContent = res.score;
+    el.resScore.textContent = '0';
     el.resCukes.textContent = res.cukes;
+    animateNum(el.resScore, res.score, 900);
     el.resBest.textContent = isRecord ? '🏆 Новый рекорд!' : ('Рекорд: ' + store.best);
     el.resRank.textContent = lb.rank + '-е место из ' + lb.total + ' соперников';
     el.resMini.innerHTML = lb.rows.slice(0, 4).map(rowHtml).join('');
@@ -282,6 +287,18 @@
     refreshBadge(freshReady);
     if (freshReady > 0) toast('🎁 Доступен новый приз — загляни в «Призы»!');
   });
+
+  /* плавный счёт до значения (экран результата) */
+  function animateNum(node, to, ms) {
+    var t0 = performance.now();
+    function stepFrame(now) {
+      var p = Math.min(1, (now - t0) / ms);
+      var eased = 1 - Math.pow(1 - p, 3);
+      node.textContent = Math.round(to * eased);
+      if (p < 1) requestAnimationFrame(stepFrame);
+    }
+    requestAnimationFrame(stepFrame);
+  }
 
   /* ---------- шаринг ---------- */
   function shareResult() {

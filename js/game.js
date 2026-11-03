@@ -18,9 +18,13 @@
     cukes: 0,              /* огурцов за раунд */
     peel: 0,               /* прогресс шкурки 0..1 */
     seed: 0,               /* номер огурца — затравка для узора */
+    golden: false,         /* золотой огурец (каждый 5-й): ×2 очки */
+    spawn: 0,              /* 1 -> 0: анимация появления огурца */
     combo: 0,
     comboLeft: 0,          /* остаток окна комбо (для полосы) */
     lastTapAt: 0,
+    lastSec: -1,           /* для тиков последних секунд */
+    recordShown: false,    /* «рекорд побит» уже поздравил */
     squash: 0,
     shake: 0,
     flash: 0,
@@ -28,6 +32,8 @@
     particles: [],
     floaters: []
   };
+
+  var CRUNCH_WORDS = ['хрусть!', 'щёлк!', 'вжух!', 'чище!', 'ещё!', 'хрум!'];
 
   var W = 0, H = 0, DPR = 1;
   var geo = { cx: 0, top: 0, h: 0, w: 0 };
@@ -120,8 +126,37 @@
         })(notes[i], i);
       }
     }
+    /* тик последних секунд */
+    function tick() {
+      if (!on) return;
+      var a = ensure(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator();
+      o.type = 'sine'; o.frequency.value = 1150;
+      var g = a.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.18, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.08);
+    }
+    /* гудок конца раунда */
+    function buzz() {
+      if (!on) return;
+      var a = ensure(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(220, t);
+      o.frequency.exponentialRampToValueAtTime(70, t + 0.4);
+      var g = a.createGain();
+      g.gain.setValueAtTime(0.22, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.46);
+    }
     return {
-      crunch: crunch, fanfare: fanfare, ensure: ensure,
+      crunch: crunch, fanfare: fanfare, tick: tick, buzz: buzz, ensure: ensure,
       setOn: function (v) { on = v; }
     };
   })();
@@ -181,7 +216,7 @@
     S.lastTapAt = now;
     S.comboLeft = 0.7;
 
-    var mult = 1 + S.combo * 0.2;
+    var mult = (1 + S.combo * 0.2) * (S.golden ? 2 : 1);
     var pts = Math.round(12 * mult);
     S.score += pts;
 
@@ -195,8 +230,20 @@
 
     var fy = frontierY();
     spawnCrunch(fy);
-    addFloater('+' + pts, geo.cx + rnd(-24, 24), fy - 34, '#ffffff', 21);
+    addFloater('+' + pts, geo.cx + rnd(-24, 24), fy - 34, S.golden ? '#ffe08a' : '#ffffff', 21);
     if (S.combo >= 3) addFloater('КОМБО ×' + S.combo, geo.cx, fy - 80, '#f4b942', 24);
+    else if (Math.random() < 0.25) {
+      var word = CRUNCH_WORDS[Math.floor(Math.random() * CRUNCH_WORDS.length)];
+      addFloater(word, geo.cx + rnd(-30, 30), fy - 78, '#d7f0b2', 19);
+    }
+
+    /* одноразовое поздравление с личным рекордом посреди раунда */
+    var best = (window.Store && Store.state && Store.state.best) || 0;
+    if (best > 0 && S.score > best && !S.recordShown) {
+      S.recordShown = true;
+      addFloater('🏆 Рекорд побит!', geo.cx, geo.top + geo.h * 0.25, '#f4b942', 24);
+      Sfx.fanfare();
+    }
 
     Sfx.crunch(Math.min(S.combo, 6));
     if (window.Platform && Platform.haptic) Platform.haptic('light');
@@ -205,15 +252,21 @@
   }
 
   function completeCucumber() {
+    var bonus = S.golden ? 120 : 60;
     S.cukes++;
     S.peel = 0;
     S.seed++;
-    S.score += 60;
+    S.score += bonus;
     S.flash = 1;
-    addFloater('ЧИСТО! +60', geo.cx, geo.top + geo.h * 0.42, '#8ed46f', 26);
+    addFloater(S.golden ? 'ЗОЛОТОЙ! +' + bonus : 'ЧИСТО! +' + bonus, geo.cx, geo.top + geo.h * 0.42, S.golden ? '#ffe08a' : '#8ed46f', 26);
     burstConfetti(geo.cx, geo.top + geo.h * 0.3);
     Sfx.fanfare();
     if (window.Platform && Platform.haptic) Platform.haptic('success');
+
+    /* новый огурец: спавн-анимация; каждый 5-й — золотой */
+    S.spawn = 1;
+    S.golden = (S.cukes % 5 === 0);
+    if (S.golden) addFloater('✨ ЗОЛОТОЙ ОГУРЕЦ! ×2', geo.cx, geo.top + geo.h * 0.2, '#ffe08a', 22);
   }
 
   /* ---------- частицы и надписи ---------- */
@@ -268,9 +321,15 @@
     S.flash = Math.max(0, S.flash - dt * 2);
     if (S.handBurst > 0) S.handBurst = Math.max(0, S.handBurst - dt * 3.4);
     if (S.comboLeft > 0) S.comboLeft = Math.max(0, S.comboLeft - dt);
+    if (S.spawn > 0) S.spawn = Math.max(0, S.spawn - dt * 2.4);
 
     if (S.mode === 'play') {
       S.tLeft -= dt;
+      var sec = Math.ceil(Math.max(0, S.tLeft));
+      if (sec !== S.lastSec) {
+        S.lastSec = sec;
+        if (sec <= 5 && sec > 0) Sfx.tick();
+      }
       if (S.tLeft <= 0) endRound();
     }
 
@@ -294,6 +353,7 @@
   function endRound() {
     S.tLeft = 0;
     S.mode = 'idle';
+    Sfx.buzz();
     if (hooks.roundEnd) hooks.roundEnd({ score: S.score, cukes: S.cukes });
   }
 
@@ -331,23 +391,45 @@
     if (!(w > 0) || !(h > 0)) return;
 
     ctx.save();
-    /* squash при тапе */
+    /* появление нового огурца (спавн-анимация) + squash при тапе */
     var sq = S.squash;
+    var sp = S.spawn;
+    var grow = 1 - 0.35 * sp * sp;          /* из 0.65 в 1 с замедлением */
+    var rise = sp * 46;                     /* спуск сверху */
     ctx.translate(geo.cx, y0 + h / 2);
-    ctx.scale(1 + sq * 0.05, 1 - sq * 0.055);
-    ctx.translate(-geo.cx, -(y0 + h / 2));
+    ctx.scale((1 + sq * 0.05) * grow, (1 - sq * 0.055) * grow);
+    ctx.translate(-geo.cx, -(y0 + h / 2) - rise);
 
     rr(x0, y0, w, h, w / 2);
     ctx.save();
     ctx.clip();
 
-    /* кожа: цилиндр */
+    /* кожа: цилиндр (золотой огурец — золотая палитра) */
     var g = ctx.createLinearGradient(x0, 0, x0 + w, 0);
-    g.addColorStop(0, '#2e6b1c'); g.addColorStop(0.3, '#57a833');
-    g.addColorStop(0.5, '#6fc23f'); g.addColorStop(0.7, '#57a833');
-    g.addColorStop(1, '#245716');
+    if (S.golden) {
+      g.addColorStop(0, '#8a5f14'); g.addColorStop(0.3, '#d9a825');
+      g.addColorStop(0.5, '#f7cf5c'); g.addColorStop(0.7, '#d9a825');
+      g.addColorStop(1, '#7a5410');
+    } else {
+      g.addColorStop(0, '#2e6b1c'); g.addColorStop(0.3, '#57a833');
+      g.addColorStop(0.5, '#6fc23f'); g.addColorStop(0.7, '#57a833');
+      g.addColorStop(1, '#245716');
+    }
     ctx.fillStyle = g;
     ctx.fillRect(x0, y0, w, h);
+
+    /* золотой: мерцающие искры */
+    if (S.golden) {
+      var sg = mulberry(7 + S.seed * 17);
+      for (var spark = 0; spark < 7; spark++) {
+        var sxp = x0 + sg() * w, syp = y0 + sg() * h;
+        var tw = 0.5 + 0.5 * Math.sin(t * 5 + spark * 2.3);
+        ctx.fillStyle = 'rgba(255,244,200,' + (0.25 + 0.55 * tw).toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(sxp, syp, w * 0.035 * (0.6 + tw), 0, TAU());
+        ctx.fill();
+      }
+    }
 
     /* волнистые полосы шкурки */
     ctx.strokeStyle = 'rgba(20,48,8,0.35)';
@@ -625,6 +707,10 @@
     S.score = 0; S.cukes = 0; S.peel = 0;
     S.combo = 0; S.comboLeft = 0;
     S.handBurst = 0; S.flash = 0;
+    S.spawn = 1;               /* первый огурец выезжает */
+    S.golden = false;
+    S.lastSec = ROUND_TIME;
+    S.recordShown = false;
   }
 
   function pause() { if (S.mode === 'play') S.mode = 'paused'; }

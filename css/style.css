@@ -115,7 +115,12 @@ body {
   box-shadow: 0 2px 0 rgba(29, 58, 18, .16);
 }
 .hud-cap { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); }
-.hud-timer { margin-inline: auto; font-size: 22px; }
+.hud-timer { margin-inline: auto; font-size: 22px; transition: color .2s ease; }
+.hud-timer.danger {
+  color: var(--danger);
+  animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse { 50% { transform: scale(1.14); } }
 .hud-btn {
   pointer-events: auto; cursor: pointer;
   font: inherit; font-size: 18px; border: none;
