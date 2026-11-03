@@ -216,7 +216,9 @@
   function cloudSyncToTG() {
     var tg = window.Telegram && window.Telegram.WebApp;
     if (!tg || !tg.CloudStorage || !tg.CloudStorage.setItem) return;
+    /* Desktop-TG не умеет CloudStorage (WebAppMethodUnsupported) — просто играем без облачной синхронизации */
     try {
+      if (tg.isVersionAtLeast && !tg.isVersionAtLeast('6.9')) return;
       tg.CloudStorage.setItem('ogurchilo_progress', JSON.stringify({
         totalCukes: Store.state.totalCukes,
         best: Store.state.best,
@@ -228,20 +230,25 @@
   function cloudSyncFromTG(done) {
     var tg = window.Telegram && window.Telegram.WebApp;
     if (!tg || !tg.CloudStorage || !tg.CloudStorage.getItem) return done();
-    tg.CloudStorage.getItem('ogurchilo_progress', function (err, raw) {
-      try {
-        if (!err && raw) {
-          var data = JSON.parse(raw);
-          var s = Store.state;
-          if ((data.totalCukes || 0) > (s.totalCukes || 0)) s.totalCukes = data.totalCukes;
-          if ((data.best || 0) > (s.best || 0)) s.best = data.best;
-          var cl = data.claimed || {};
-          for (var k in cl) if (Object.prototype.hasOwnProperty.call(cl, k)) s.claimed[k] = true;
-          Store.save();
-        }
-      } catch (e) { /* битые данные — играем с локальными */ }
-      done();
-    });
+    try {
+      if (tg.isVersionAtLeast && !tg.isVersionAtLeast('6.9')) return done();
+    } catch (e) { return done(); }
+    try {
+      tg.CloudStorage.getItem('ogurchilo_progress', function (err, raw) {
+        try {
+          if (!err && raw) {
+            var data = JSON.parse(raw);
+            var s = Store.state;
+            if ((data.totalCukes || 0) > (s.totalCukes || 0)) s.totalCukes = data.totalCukes;
+            if ((data.best || 0) > (s.best || 0)) s.best = data.best;
+            var cl = data.claimed || {};
+            for (var k in cl) if (Object.prototype.hasOwnProperty.call(cl, k)) s.claimed[k] = true;
+            Store.save();
+          }
+        } catch (e) { /* битые данные — играем с локальными */ }
+        done();
+      });
+    } catch (e) { done(); }
   }
 
   /* ---------- конец раунда ---------- */
