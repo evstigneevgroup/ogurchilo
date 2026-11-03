@@ -1,0 +1,19 @@
+{
+  "coffee": [
+    "OGUR-CAF-7K2M",
+    "OGUR-CAF-9P1X",
+    "OGUR-CAF-4T8Q"
+  ],
+  "food": [
+    "OGUR-EDAL-300-A1",
+    "OGUR-EDAL-300-B2",
+    "OGUR-EDAL-300-C3"
+  ],
+  "cinema": [
+    "OGUR-CIN-2X1-D4",
+    "OGUR-CIN-2X1-E5"
+  ],
+  "merch": [
+    "MERCH-Заявка-F6"
+  ]
+}

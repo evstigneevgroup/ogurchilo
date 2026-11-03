@@ -114,6 +114,12 @@
     var store = Store.state;
     var st = Prizes.statuses(store.totalCukes, store.claimed);
     var pr = Prizes.progress(store.totalCukes);
+    var inTG = window.Telegram && window.Telegram.WebApp;
+    if (el.prizesNote) {
+      el.prizesNote.textContent = inTG
+        ? 'Промокод приходит личным сообщением от бота @ogurchilo_bot после нажатия «Забрать».'
+        : 'Демо: промокоды вымышленные. На проде коды выдаёт партнёрская сеть через бэкенд.';
+    }
 
     if (pr.next) {
       el.prizesProgress.innerHTML = 'Очищено огурцов: <b>' + store.totalCukes +
@@ -126,10 +132,11 @@
 
     el.prizesList.innerHTML = st.map(function (p) {
       var side;
+      var inTG = window.Telegram && window.Telegram.WebApp;
       if (p.state === 'ready') {
         side = '<button class="btn btn-primary btn-small" data-claim="' + p.id + '">Забрать</button>';
       } else if (p.state === 'claimed') {
-        side = '<span class="code" data-copy="' + p.code + '">' + p.code + '</span>';
+        side = (inTG ? '<span class="lock">🎁 код в чате бота</span>' : '<span class="code" data-copy="' + p.code + '">' + p.code + '</span>');
       } else {
         side = '<span class="lock">🔒 ' + p.needCukes + ' огурцов</span>';
       }
@@ -165,8 +172,27 @@
   function claimPrize(id) {
     var p = Prizes.byId(id);
     if (!p) return;
-    Store.state.claimed[id] = true;
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && typeof tg.sendData === 'function') {
+      /* в Telegram: заявка уходит боту, он пришлёт код в чат (мини-апп закроется) */
+      try {
+        tg.sendData(JSON.stringify({ action: 'claim', prize: id }));
+        Store.state.claimed[id] = true;
+        Store.save();
+        cloudSyncToTG();
+      } catch (e) {
+        report('sendData: ' + ((e && e.message) || String(e)));
+        demoClaim(p);
+      }
+      return;
+    }
+    demoClaim(p);
+  }
+
+  function demoClaim(p) {
+    Store.state.claimed[p.id] = true;
     Store.save();
+    cloudSyncToTG();
     Platform.haptic('success');
     if (p.code) {
       copyCode(p.code);
@@ -186,6 +212,38 @@
     el.btnSound.textContent = Store.state.sound ? '🔊' : '🔇';
   }
 
+  /* ---------- синхронизация прогресса через CloudStorage Telegram ---------- */
+  function cloudSyncToTG() {
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if (!tg || !tg.CloudStorage || !tg.CloudStorage.setItem) return;
+    try {
+      tg.CloudStorage.setItem('ogurchilo_progress', JSON.stringify({
+        totalCukes: Store.state.totalCukes,
+        best: Store.state.best,
+        claimed: Store.state.claimed
+      }), function () {});
+    } catch (e) { /* не критично */ }
+  }
+
+  function cloudSyncFromTG(done) {
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if (!tg || !tg.CloudStorage || !tg.CloudStorage.getItem) return done();
+    tg.CloudStorage.getItem('ogurchilo_progress', function (err, raw) {
+      try {
+        if (!err && raw) {
+          var data = JSON.parse(raw);
+          var s = Store.state;
+          if ((data.totalCukes || 0) > (s.totalCukes || 0)) s.totalCukes = data.totalCukes;
+          if ((data.best || 0) > (s.best || 0)) s.best = data.best;
+          var cl = data.claimed || {};
+          for (var k in cl) if (Object.prototype.hasOwnProperty.call(cl, k)) s.claimed[k] = true;
+          Store.save();
+        }
+      } catch (e) { /* битые данные — играем с локальными */ }
+      done();
+    });
+  }
+
   /* ---------- конец раунда ---------- */
   Game.onRoundEnd(function (res) {
     var store = Store.state;
@@ -197,6 +255,7 @@
     store.totalCukes += res.cukes;
     store.rounds += 1;
     Store.save();
+    cloudSyncToTG();
 
     var lb = Leaderboards.buildOpponents(res.score);
 
@@ -250,6 +309,7 @@
       modal: q('modal'),
       modalTitle: q('modal-title'),
       modalBody: q('modal-body'),
+      prizesNote: q('prizes-note'),
       toast: q('toast')
     };
 
@@ -308,7 +368,8 @@
     Game.init();
     window.__MARK('ui: движок');
     Game.setSound(Store.state.sound);
-    show('start');
+    /* прогресс из Telegram CloudStorage (синхронизация устройств) → потом старт-экран */
+    cloudSyncFromTG(function () { show('start'); });
     window.__MARK('ui: старт-экран показан');
   }
 
