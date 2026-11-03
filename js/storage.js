@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var KEY = 'ogurchilo:v1';
+  var KEY = 'ogurchilo:v2'; /* v2: раунд 15 секунд — прогресс старого формата честно обнуляем */
   var DEFAULTS = {
     best: 0,        // лучший результат за раунд
     totalScore: 0,  // очки за всё время

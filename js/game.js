@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  var ROUND_TIME = 30; /* секунд на раунд */
+  var ROUND_TIME = 15; /* секунд на раунд: короткая петля = чаще «ещё раз» */
 
   var canvas = null;
   var ctx = null;
@@ -240,8 +240,8 @@
     var pts = Math.round(12 * mult);
     S.score += pts;
 
-    /* огурцы в раунде прокачиваются медленнее — лёгкий рост сложности */
-    var step = Math.max(0.038, 0.055 * Math.pow(0.96, S.cukes));
+    /* огурец чистится быстрее: ~12 тапов, с лёгким ростом сложности */
+    var step = Math.max(0.06, 0.085 * Math.pow(0.97, S.cukes));
     S.peel += step;
 
     S.squash = 1;
@@ -283,9 +283,9 @@
     Sfx.fanfare();
     if (window.Platform && Platform.haptic) Platform.haptic('success');
 
-    /* новый огурец: спавн-анимация; каждый 5-й — золотой */
+    /* новый огурец: спавн-анимация; каждый 3-й — золотой */
     S.spawn = 1;
-    S.golden = (S.cukes % 5 === 0);
+    S.golden = (S.cukes % 3 === 0);
     if (S.golden) { S.goldenCount++; addFloater('✨ ЗОЛОТОЙ ОГУРЕЦ! ×2', geo.cx, geo.top + geo.h * 0.2, '#ffe08a', 22); }
   }
 
@@ -747,10 +747,10 @@
     requestAnimationFrame(frame);
   }
 
-  function start() {
+  function start(seconds) {
     layout(); /* на момент запуска игровой экран уже показан */
     S.mode = 'play';
-    S.tLeft = ROUND_TIME;
+    S.tLeft = Math.max(1, seconds || ROUND_TIME); /* можно форсировать короткий раунд для теста */
     S.score = 0; S.cukes = 0; S.peel = 0;
     S.combo = 0; S.comboLeft = 0;
     S.maxCombo = 0; S.goldenCount = 0;
