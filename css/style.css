@@ -258,6 +258,23 @@ body {
 .res-val { font-size: 34px; font-weight: 900; color: var(--accent-dark); }
 .res-cap { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); }
 .res-best { color: var(--gold); font-weight: 800; }
+.res-title { color: var(--accent-dark); font-weight: 800; }
+
+/* титул и ежедневка на старте */
+.rank-card, .daily-card {
+  width: 100%; box-sizing: border-box;
+  background: var(--card); border-radius: 16px; padding: 11px 14px;
+  box-shadow: 0 3px 0 rgba(29, 58, 18, .12);
+  text-align: left;
+}
+.rank-line { font-size: 15px; display: flex; align-items: center; gap: 7px; }
+.rank-emoji { font-size: 19px; }
+.rank-bar { margin-top: 8px; height: 9px; }
+.rank-next { margin-top: 5px; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.daily-card { outline: 2px solid rgba(244, 185, 66, .55); outline-offset: -2px; }
+.daily-cap { font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-soft); }
+.daily-text { margin-top: 3px; font-weight: 800; font-size: 14px; }
+.daily-state { margin-top: 4px; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
 .res-rank { font-weight: 800; color: var(--ink); }
 
 #toast {

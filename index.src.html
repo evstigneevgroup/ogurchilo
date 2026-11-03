@@ -23,6 +23,16 @@
           <div class="stat"><span class="stat-val" id="stat-best">0</span><span class="stat-cap">рекорд</span></div>
           <div class="stat"><span class="stat-val" id="stat-cukes">0</span><span class="stat-cap">огурцов всего</span></div>
         </div>
+        <div class="rank-card">
+          <div class="rank-line"><span class="rank-emoji" id="rank-emoji">🌱</span><b id="rank-title">Новичок грядки</b></div>
+          <div class="bar rank-bar"><div class="bar-fill" id="rank-bar"></div></div>
+          <div class="rank-next" id="rank-next"></div>
+        </div>
+        <div class="daily-card" id="daily-card">
+          <div class="daily-cap">Задание дня</div>
+          <div class="daily-text" id="daily-text"></div>
+          <div class="daily-state" id="daily-state"></div>
+        </div>
         <button class="btn btn-primary btn-big" id="btn-play">ИГРАТЬ · 30 СЕК</button>
         <div class="start-row">
           <button class="btn btn-ghost" id="btn-leaders">🏆 Лидеры</button>
@@ -81,11 +91,13 @@
     <div class="overlay" id="overlay-result">
       <div class="panel">
         <h2>Время вышло!</h2>
-        <div class="res-grid">
+        <div class="res-grid">>
           <div class="res-item"><span class="res-val" id="res-cukes">0</span><span class="res-cap">огурцов</span></div>
           <div class="res-item"><span class="res-val" id="res-score">0</span><span class="res-cap">очков</span></div>
         </div>
         <p class="res-best" id="res-best"></p>
+      <p class="res-title" id="res-title" hidden></p>
+      <p class="res-title" id="res-title" hidden></p>
         <p class="res-rank" id="res-rank"></p>
         <div class="lb-list mini" id="res-mini"></div>
         <div class="panel-row">
@@ -119,12 +131,13 @@
     <div id="toast" role="status"></div>
   </div>
 
-  <script src="js/platform.js?v=4"></script>
-  <script src="js/storage.js?v=4"></script>
-  <script src="js/leaderboards.js?v=4"></script>
-  <script src="js/prizes.js?v=4"></script>
-  <script src="js/game.js?v=4"></script>
-  <script src="js/ui.js?v=4"></script>
-  <script src="js/main.js?v=4"></script>
+  <script src="js/platform.js?v=5"></script>
+  <script src="js/storage.js?v=5"></script>
+  <script src="js/daily.js?v=5"></script>
+  <script src="js/leaderboards.js?v=5"></script>
+  <script src="js/prizes.js?v=5"></script>
+  <script src="js/game.js?v=5"></script>
+  <script src="js/ui.js?v=5"></script>
+  <script src="js/main.js?v=5"></script>
 </body>
 </html>

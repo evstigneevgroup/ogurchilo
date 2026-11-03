@@ -210,11 +210,71 @@
     refreshBadge();
   }
 
+  /* ---------- титулы и ежедневка ---------- */
+  function renderRank() {
+    var rank = Prizes.rankFor(Store.state.totalCukes);
+    el.rankEmoji.textContent = rank.emoji;
+    el.rankTitle.textContent = rank.title;
+    el.rankBar.style.width = (rank.pct * 100).toFixed(0) + '%';
+    el.rankNext.textContent = rank.next
+      ? 'До «' + rank.next.title + '»: ещё ' + (rank.next.need - Store.state.totalCukes) + ' огурцов'
+      : 'Максимальный титул — ты легенда 🥒';
+  }
+
+  function ensureDaily() {
+    var s = Store.state;
+    if (!s.daily || s.daily.date !== Daily.todayStr()) {
+      s.daily = { date: Daily.todayStr(), quest: Daily.questFor(Daily.todayStr()), done: false };
+      Store.save();
+    }
+    return s.daily;
+  }
+
+  function renderDaily() {
+    var d = ensureDaily();
+    el.dailyText.textContent = d.quest.text;
+    if (d.done) {
+      el.dailyState.textContent = '✅ Выполнено' + (Store.state.streak > 0 ? ' · 🔥 стрик ' + Store.state.streak + ' дн.' : '');
+      el.dailyState.style.color = 'var(--accent-dark)';
+    } else {
+      el.dailyState.textContent = Store.state.streak > 0 ? '🔥 стрик ' + Store.state.streak + ' дн. — не рви цепочку!' : 'Выполни и возвращайся завтра!';
+      el.dailyState.style.color = 'var(--ink-soft)';
+    }
+  }
+
+  function settleDaily(res) {
+    var s = Store.state;
+    var d = ensureDaily();
+    if (d.done || !Daily.check(d.quest, res)) return;
+    d.done = true;
+    s.streak = (s.lastDoneDate === Daily.yesterdayStr()) ? (s.streak || 0) + 1 : 1;
+    s.lastDoneDate = Daily.todayStr();
+    Store.save();
+    cloudSyncToTG();
+    toast('✅ Задание дня выполнено!' + (s.streak > 1 ? ' 🔥 Стрик: ' + s.streak + ' дн.' : ''));
+  }
+
+  function settleRank() {
+    var s = Store.state;
+    var rank = Prizes.rankFor(s.totalCukes);
+    if (rank.need !== s.rankNeed) {
+      var isNew = rank.need > s.rankNeed;
+      s.rankNeed = rank.need;
+      Store.save();
+      if (isNew && rank.need > 0 && el.resTitle) {
+        el.resTitle.textContent = '🎉 Новый титул: ' + rank.emoji + ' ' + rank.title;
+        el.resTitle.hidden = false;
+      }
+    }
+  }
+
   /* ---------- главное меню ---------- */
   function renderStart() {
     el.statBest.textContent = Store.state.best;
     el.statCukes.textContent = Store.state.totalCukes;
     refreshBadge();
+    renderRank();
+    renderDaily();
     el.btnSound.textContent = Store.state.sound ? '🔊' : '🔇';
   }
 
@@ -275,6 +335,9 @@
     var st = Prizes.statuses(store.totalCukes, store.claimed);
     var freshReady = st.filter(function (p) { return p.state === 'ready'; }).length;
 
+    settleDaily(res);
+    settleRank();
+
     el.resScore.textContent = '0';
     el.resCukes.textContent = res.cukes;
     animateNum(el.resScore, res.score, 900);
@@ -330,6 +393,12 @@
       statBest: q('stat-best'),
       statCukes: q('stat-cukes'),
       badgePrizes: q('badge-prizes'),
+      rankEmoji: q('rank-emoji'),
+      rankTitle: q('rank-title'),
+      rankBar: q('rank-bar'),
+      rankNext: q('rank-next'),
+      dailyText: q('daily-text'),
+      dailyState: q('daily-state'),
       btnSound: q('btn-sound'),
       leadersList: q('leaders-list'),
       leadersNote: q('leaders-note'),
@@ -342,6 +411,7 @@
       resScore: q('res-score'),
       resCukes: q('res-cukes'),
       resBest: q('res-best'),
+      resTitle: q('res-title'),
       resRank: q('res-rank'),
       resMini: q('res-mini'),
       modal: q('modal'),

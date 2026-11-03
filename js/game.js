@@ -20,6 +20,8 @@
     seed: 0,               /* номер огурца — затравка для узора */
     golden: false,         /* золотой огурец (каждый 5-й): ×2 очки */
     spawn: 0,              /* 1 -> 0: анимация появления огурца */
+    maxCombo: 0,           /* максимальное комбо за раунд */
+    goldenCount: 0,        /* золотых очищено за раунд */
     combo: 0,
     comboLeft: 0,          /* остаток окна комбо (для полосы) */
     lastTapAt: 0,
@@ -140,6 +142,22 @@
       o.connect(g); g.connect(a.destination);
       o.start(t); o.stop(t + 0.08);
     }
+    /* блип на пороге комбо */
+    function comboUp() {
+      if (!on) return;
+      var a = ensure(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(660, t);
+      o.frequency.exponentialRampToValueAtTime(990, t + 0.09);
+      var g = a.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.14, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.13);
+    }
     /* гудок конца раунда */
     function buzz() {
       if (!on) return;
@@ -156,7 +174,7 @@
       o.start(t); o.stop(t + 0.46);
     }
     return {
-      crunch: crunch, fanfare: fanfare, tick: tick, buzz: buzz, ensure: ensure,
+      crunch: crunch, fanfare: fanfare, tick: tick, comboUp: comboUp, buzz: buzz, ensure: ensure,
       setOn: function (v) { on = v; }
     };
   })();
@@ -213,6 +231,8 @@
   function tap() {
     var now = performance.now();
     if (now - S.lastTapAt < 700) S.combo = Math.min(S.combo + 1, 12); else S.combo = 0;
+    if (S.combo > S.maxCombo) S.maxCombo = S.combo;
+    if (S.combo === 4 || S.combo === 8 || S.combo === 12) Sfx.comboUp();
     S.lastTapAt = now;
     S.comboLeft = 0.7;
 
@@ -266,7 +286,7 @@
     /* новый огурец: спавн-анимация; каждый 5-й — золотой */
     S.spawn = 1;
     S.golden = (S.cukes % 5 === 0);
-    if (S.golden) addFloater('✨ ЗОЛОТОЙ ОГУРЕЦ! ×2', geo.cx, geo.top + geo.h * 0.2, '#ffe08a', 22);
+    if (S.golden) { S.goldenCount++; addFloater('✨ ЗОЛОТОЙ ОГУРЕЦ! ×2', geo.cx, geo.top + geo.h * 0.2, '#ffe08a', 22); }
   }
 
   /* ---------- частицы и надписи ---------- */
@@ -354,11 +374,17 @@
     S.tLeft = 0;
     S.mode = 'idle';
     Sfx.buzz();
-    if (hooks.roundEnd) hooks.roundEnd({ score: S.score, cukes: S.cukes });
+    if (hooks.roundEnd) hooks.roundEnd({
+      score: S.score,
+      cukes: S.cukes,
+      maxCombo: S.maxCombo,
+      golden: S.goldenCount
+    });
   }
 
   function draw() {
     ctx.clearRect(0, 0, W, H);
+    drawBackdrop();
     ctx.save();
     if (S.shake > 0) ctx.translate(rnd(-S.shake, S.shake) * 0.5, rnd(-S.shake, S.shake) * 0.5);
     drawShadow();
@@ -370,6 +396,27 @@
     if (S.flash > 0) {
       ctx.fillStyle = 'rgba(255,255,255,' + (S.flash * 0.35).toFixed(3) + ')';
       ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  /* живой фон: мягкие плавающие пятна за огурцом */
+  function drawBackdrop() {
+    if (!(W > 0) || !(H > 0)) return;
+    var t = performance.now() / 1000;
+    var blobs = [
+      { x: 0.18, y: 0.22, r: 0.34, dx: 0.05, dy: 0.04, col: 'rgba(142,212,111,0.13)' },
+      { x: 0.85, y: 0.30, r: 0.28, dx: -0.04, dy: 0.06, col: 'rgba(244,185,66,0.10)' },
+      { x: 0.30, y: 0.85, r: 0.38, dx: 0.06, dy: -0.05, col: 'rgba(89,185,60,0.09)' },
+      { x: 0.75, y: 0.80, r: 0.25, dx: -0.05, dy: -0.04, col: 'rgba(142,212,111,0.10)' }
+    ];
+    for (var i = 0; i < blobs.length; i++) {
+      var b = blobs[i];
+      var bx = (b.x + Math.sin(t * 0.13 + i * 1.7) * b.dx) * W;
+      var by = (b.y + Math.cos(t * 0.11 + i * 2.1) * b.dy) * H;
+      ctx.fillStyle = b.col;
+      ctx.beginPath();
+      ctx.arc(bx, by, b.r * Math.min(W, H), 0, TAU());
+      ctx.fill();
     }
   }
 
@@ -706,6 +753,7 @@
     S.tLeft = ROUND_TIME;
     S.score = 0; S.cukes = 0; S.peel = 0;
     S.combo = 0; S.comboLeft = 0;
+    S.maxCombo = 0; S.goldenCount = 0;
     S.handBurst = 0; S.flash = 0;
     S.spawn = 1;               /* первый огурец выезжает */
     S.golden = false;

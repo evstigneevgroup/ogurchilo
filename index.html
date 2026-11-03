@@ -3760,6 +3760,23 @@ body {
 .res-val { font-size: 34px; font-weight: 900; color: var(--accent-dark); }
 .res-cap { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); }
 .res-best { color: var(--gold); font-weight: 800; }
+.res-title { color: var(--accent-dark); font-weight: 800; }
+
+/* титул и ежедневка на старте */
+.rank-card, .daily-card {
+  width: 100%; box-sizing: border-box;
+  background: var(--card); border-radius: 16px; padding: 11px 14px;
+  box-shadow: 0 3px 0 rgba(29, 58, 18, .12);
+  text-align: left;
+}
+.rank-line { font-size: 15px; display: flex; align-items: center; gap: 7px; }
+.rank-emoji { font-size: 19px; }
+.rank-bar { margin-top: 8px; height: 9px; }
+.rank-next { margin-top: 5px; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.daily-card { outline: 2px solid rgba(244, 185, 66, .55); outline-offset: -2px; }
+.daily-cap { font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-soft); }
+.daily-text { margin-top: 3px; font-weight: 800; font-size: 14px; }
+.daily-state { margin-top: 4px; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
 .res-rank { font-weight: 800; color: var(--ink); }
 
 #toast {
@@ -3815,6 +3832,16 @@ body {
         <div class="start-stats">
           <div class="stat"><span class="stat-val" id="stat-best">0</span><span class="stat-cap">рекорд</span></div>
           <div class="stat"><span class="stat-val" id="stat-cukes">0</span><span class="stat-cap">огурцов всего</span></div>
+        </div>
+        <div class="rank-card">
+          <div class="rank-line"><span class="rank-emoji" id="rank-emoji">🌱</span><b id="rank-title">Новичок грядки</b></div>
+          <div class="bar rank-bar"><div class="bar-fill" id="rank-bar"></div></div>
+          <div class="rank-next" id="rank-next"></div>
+        </div>
+        <div class="daily-card" id="daily-card">
+          <div class="daily-cap">Задание дня</div>
+          <div class="daily-text" id="daily-text"></div>
+          <div class="daily-state" id="daily-state"></div>
         </div>
         <button class="btn btn-primary btn-big" id="btn-play">ИГРАТЬ · 30 СЕК</button>
         <div class="start-row">
@@ -3874,11 +3901,13 @@ body {
     <div class="overlay" id="overlay-result">
       <div class="panel">
         <h2>Время вышло!</h2>
-        <div class="res-grid">
+        <div class="res-grid">>
           <div class="res-item"><span class="res-val" id="res-cukes">0</span><span class="res-cap">огурцов</span></div>
           <div class="res-item"><span class="res-val" id="res-score">0</span><span class="res-cap">очков</span></div>
         </div>
         <p class="res-best" id="res-best"></p>
+      <p class="res-title" id="res-title" hidden></p>
+      <p class="res-title" id="res-title" hidden></p>
         <p class="res-rank" id="res-rank"></p>
         <div class="lb-list mini" id="res-mini"></div>
         <div class="panel-row">
@@ -4035,6 +4064,10 @@ body {
     lastScore: 0,
     lastCukes: 0,
     claimed: {},    // id приза -> true
+    rankNeed: 0,    // need титула, поздравление с которым уже показали
+    streak: 0,      // дней подряд с выполненным заданием
+    lastDoneDate: '',
+    daily: null,    // {date, quest, done}
     sound: true
   };
 
@@ -4057,6 +4090,57 @@ body {
   };
 
   window.Store = Store;
+})();
+
+</script>
+  <script>
+/* daily.js — ежедневное задание и стрик дней.
+   Задание детерминировано от даты: у всех в этот день — одно и то же. */
+(function () {
+  'use strict';
+
+  var QUEST_POOL = [
+    { type: 'cukes',  n: [4, 8],       text: 'Почисти {n} огурцов за раунд' },
+    { type: 'score',  n: [1500, 3500], text: 'Набери {n} очков за раунд' },
+    { type: 'combo',  n: [6, 10],      text: 'Дотяни комбо до ×{n}' },
+    { type: 'golden', n: [1, 2],       text: 'Почисти {n} золотых огурцов за раунд' }
+  ];
+
+  function pad2(x) { return (x < 10 ? '0' : '') + x; }
+  function dateToStr(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+
+  function todayStr() { return dateToStr(new Date()); }
+  function yesterdayStr() { return dateToStr(new Date(Date.now() - 86400000)); }
+
+  function mulberry(seed) {
+    return function () {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function questFor(dateStr) {
+    var seed = 0;
+    for (var i = 0; i < dateStr.length; i++) seed = (seed * 31 + dateStr.charCodeAt(i)) | 0;
+    var rng = mulberry(seed);
+    var q = QUEST_POOL[Math.floor(rng() * QUEST_POOL.length)];
+    var n = q.n[0] + Math.floor(rng() * (q.n[1] - q.n[0] + 1));
+    if (q.type === 'score') n = Math.round(n / 100) * 100;
+    return { type: q.type, n: n, text: q.text.replace('{n}', n) };
+  }
+
+  function check(quest, res) {
+    if (!quest) return false;
+    if (quest.type === 'cukes') return res.cukes >= quest.n;
+    if (quest.type === 'score') return res.score >= quest.n;
+    if (quest.type === 'combo') return (res.maxCombo || 0) >= quest.n;
+    if (quest.type === 'golden') return (res.golden || 0) >= quest.n;
+    return false;
+  }
+
+  window.Daily = { todayStr: todayStr, yesterdayStr: yesterdayStr, questFor: questFor, check: check };
 })();
 
 </script>
@@ -4188,7 +4272,26 @@ body {
     return LIST.filter(function (p) { return p.id === id; })[0] || null;
   }
 
-  window.Prizes = { list: LIST, statuses: statuses, progress: progress, byId: byId };
+  /* ---------- титулы игрока (растут от общего числа огурцов) ---------- */
+  var RANKS = [
+    { need: 0,   title: 'Новичок грядки',      emoji: '🌱' },
+    { need: 10,  title: 'Хрустящий',           emoji: '🥒' },
+    { need: 30,  title: 'Чистильщик',          emoji: '✨' },
+    { need: 70,  title: 'Мастер шкуродёр',     emoji: '🏆' },
+    { need: 140, title: 'Огуречный легенда',   emoji: '👑' }
+  ];
+
+  function rankFor(totalCukes) {
+    var cur = RANKS[0], next = null;
+    for (var i = 0; i < RANKS.length; i++) {
+      if (totalCukes >= RANKS[i].need) cur = RANKS[i];
+      else { next = RANKS[i]; break; }
+    }
+    var pct = next ? clamp((totalCukes - cur.need) / (next.need - cur.need), 0, 1) : 1;
+    return { title: cur.title, emoji: cur.emoji, need: cur.need, next: next, pct: pct };
+  }
+
+  window.Prizes = { list: LIST, statuses: statuses, progress: progress, byId: byId, rankFor: rankFor };
 })();
 
 </script>
@@ -4215,6 +4318,8 @@ body {
     seed: 0,               /* номер огурца — затравка для узора */
     golden: false,         /* золотой огурец (каждый 5-й): ×2 очки */
     spawn: 0,              /* 1 -> 0: анимация появления огурца */
+    maxCombo: 0,           /* максимальное комбо за раунд */
+    goldenCount: 0,        /* золотых очищено за раунд */
     combo: 0,
     comboLeft: 0,          /* остаток окна комбо (для полосы) */
     lastTapAt: 0,
@@ -4335,6 +4440,22 @@ body {
       o.connect(g); g.connect(a.destination);
       o.start(t); o.stop(t + 0.08);
     }
+    /* блип на пороге комбо */
+    function comboUp() {
+      if (!on) return;
+      var a = ensure(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(660, t);
+      o.frequency.exponentialRampToValueAtTime(990, t + 0.09);
+      var g = a.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.14, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.13);
+    }
     /* гудок конца раунда */
     function buzz() {
       if (!on) return;
@@ -4351,7 +4472,7 @@ body {
       o.start(t); o.stop(t + 0.46);
     }
     return {
-      crunch: crunch, fanfare: fanfare, tick: tick, buzz: buzz, ensure: ensure,
+      crunch: crunch, fanfare: fanfare, tick: tick, comboUp: comboUp, buzz: buzz, ensure: ensure,
       setOn: function (v) { on = v; }
     };
   })();
@@ -4408,6 +4529,8 @@ body {
   function tap() {
     var now = performance.now();
     if (now - S.lastTapAt < 700) S.combo = Math.min(S.combo + 1, 12); else S.combo = 0;
+    if (S.combo > S.maxCombo) S.maxCombo = S.combo;
+    if (S.combo === 4 || S.combo === 8 || S.combo === 12) Sfx.comboUp();
     S.lastTapAt = now;
     S.comboLeft = 0.7;
 
@@ -4461,7 +4584,7 @@ body {
     /* новый огурец: спавн-анимация; каждый 5-й — золотой */
     S.spawn = 1;
     S.golden = (S.cukes % 5 === 0);
-    if (S.golden) addFloater('✨ ЗОЛОТОЙ ОГУРЕЦ! ×2', geo.cx, geo.top + geo.h * 0.2, '#ffe08a', 22);
+    if (S.golden) { S.goldenCount++; addFloater('✨ ЗОЛОТОЙ ОГУРЕЦ! ×2', geo.cx, geo.top + geo.h * 0.2, '#ffe08a', 22); }
   }
 
   /* ---------- частицы и надписи ---------- */
@@ -4549,11 +4672,17 @@ body {
     S.tLeft = 0;
     S.mode = 'idle';
     Sfx.buzz();
-    if (hooks.roundEnd) hooks.roundEnd({ score: S.score, cukes: S.cukes });
+    if (hooks.roundEnd) hooks.roundEnd({
+      score: S.score,
+      cukes: S.cukes,
+      maxCombo: S.maxCombo,
+      golden: S.goldenCount
+    });
   }
 
   function draw() {
     ctx.clearRect(0, 0, W, H);
+    drawBackdrop();
     ctx.save();
     if (S.shake > 0) ctx.translate(rnd(-S.shake, S.shake) * 0.5, rnd(-S.shake, S.shake) * 0.5);
     drawShadow();
@@ -4565,6 +4694,27 @@ body {
     if (S.flash > 0) {
       ctx.fillStyle = 'rgba(255,255,255,' + (S.flash * 0.35).toFixed(3) + ')';
       ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  /* живой фон: мягкие плавающие пятна за огурцом */
+  function drawBackdrop() {
+    if (!(W > 0) || !(H > 0)) return;
+    var t = performance.now() / 1000;
+    var blobs = [
+      { x: 0.18, y: 0.22, r: 0.34, dx: 0.05, dy: 0.04, col: 'rgba(142,212,111,0.13)' },
+      { x: 0.85, y: 0.30, r: 0.28, dx: -0.04, dy: 0.06, col: 'rgba(244,185,66,0.10)' },
+      { x: 0.30, y: 0.85, r: 0.38, dx: 0.06, dy: -0.05, col: 'rgba(89,185,60,0.09)' },
+      { x: 0.75, y: 0.80, r: 0.25, dx: -0.05, dy: -0.04, col: 'rgba(142,212,111,0.10)' }
+    ];
+    for (var i = 0; i < blobs.length; i++) {
+      var b = blobs[i];
+      var bx = (b.x + Math.sin(t * 0.13 + i * 1.7) * b.dx) * W;
+      var by = (b.y + Math.cos(t * 0.11 + i * 2.1) * b.dy) * H;
+      ctx.fillStyle = b.col;
+      ctx.beginPath();
+      ctx.arc(bx, by, b.r * Math.min(W, H), 0, TAU());
+      ctx.fill();
     }
   }
 
@@ -4901,6 +5051,7 @@ body {
     S.tLeft = ROUND_TIME;
     S.score = 0; S.cukes = 0; S.peel = 0;
     S.combo = 0; S.comboLeft = 0;
+    S.maxCombo = 0; S.goldenCount = 0;
     S.handBurst = 0; S.flash = 0;
     S.spawn = 1;               /* первый огурец выезжает */
     S.golden = false;
@@ -5151,11 +5302,71 @@ body {
     refreshBadge();
   }
 
+  /* ---------- титулы и ежедневка ---------- */
+  function renderRank() {
+    var rank = Prizes.rankFor(Store.state.totalCukes);
+    el.rankEmoji.textContent = rank.emoji;
+    el.rankTitle.textContent = rank.title;
+    el.rankBar.style.width = (rank.pct * 100).toFixed(0) + '%';
+    el.rankNext.textContent = rank.next
+      ? 'До «' + rank.next.title + '»: ещё ' + (rank.next.need - Store.state.totalCukes) + ' огурцов'
+      : 'Максимальный титул — ты легенда 🥒';
+  }
+
+  function ensureDaily() {
+    var s = Store.state;
+    if (!s.daily || s.daily.date !== Daily.todayStr()) {
+      s.daily = { date: Daily.todayStr(), quest: Daily.questFor(Daily.todayStr()), done: false };
+      Store.save();
+    }
+    return s.daily;
+  }
+
+  function renderDaily() {
+    var d = ensureDaily();
+    el.dailyText.textContent = d.quest.text;
+    if (d.done) {
+      el.dailyState.textContent = '✅ Выполнено' + (Store.state.streak > 0 ? ' · 🔥 стрик ' + Store.state.streak + ' дн.' : '');
+      el.dailyState.style.color = 'var(--accent-dark)';
+    } else {
+      el.dailyState.textContent = Store.state.streak > 0 ? '🔥 стрик ' + Store.state.streak + ' дн. — не рви цепочку!' : 'Выполни и возвращайся завтра!';
+      el.dailyState.style.color = 'var(--ink-soft)';
+    }
+  }
+
+  function settleDaily(res) {
+    var s = Store.state;
+    var d = ensureDaily();
+    if (d.done || !Daily.check(d.quest, res)) return;
+    d.done = true;
+    s.streak = (s.lastDoneDate === Daily.yesterdayStr()) ? (s.streak || 0) + 1 : 1;
+    s.lastDoneDate = Daily.todayStr();
+    Store.save();
+    cloudSyncToTG();
+    toast('✅ Задание дня выполнено!' + (s.streak > 1 ? ' 🔥 Стрик: ' + s.streak + ' дн.' : ''));
+  }
+
+  function settleRank() {
+    var s = Store.state;
+    var rank = Prizes.rankFor(s.totalCukes);
+    if (rank.need !== s.rankNeed) {
+      var isNew = rank.need > s.rankNeed;
+      s.rankNeed = rank.need;
+      Store.save();
+      if (isNew && rank.need > 0 && el.resTitle) {
+        el.resTitle.textContent = '🎉 Новый титул: ' + rank.emoji + ' ' + rank.title;
+        el.resTitle.hidden = false;
+      }
+    }
+  }
+
   /* ---------- главное меню ---------- */
   function renderStart() {
     el.statBest.textContent = Store.state.best;
     el.statCukes.textContent = Store.state.totalCukes;
     refreshBadge();
+    renderRank();
+    renderDaily();
     el.btnSound.textContent = Store.state.sound ? '🔊' : '🔇';
   }
 
@@ -5216,6 +5427,9 @@ body {
     var st = Prizes.statuses(store.totalCukes, store.claimed);
     var freshReady = st.filter(function (p) { return p.state === 'ready'; }).length;
 
+    settleDaily(res);
+    settleRank();
+
     el.resScore.textContent = '0';
     el.resCukes.textContent = res.cukes;
     animateNum(el.resScore, res.score, 900);
@@ -5271,6 +5485,12 @@ body {
       statBest: q('stat-best'),
       statCukes: q('stat-cukes'),
       badgePrizes: q('badge-prizes'),
+      rankEmoji: q('rank-emoji'),
+      rankTitle: q('rank-title'),
+      rankBar: q('rank-bar'),
+      rankNext: q('rank-next'),
+      dailyText: q('daily-text'),
+      dailyState: q('daily-state'),
       btnSound: q('btn-sound'),
       leadersList: q('leaders-list'),
       leadersNote: q('leaders-note'),
@@ -5283,6 +5503,7 @@ body {
       resScore: q('res-score'),
       resCukes: q('res-cukes'),
       resBest: q('res-best'),
+      resTitle: q('res-title'),
       resRank: q('res-rank'),
       resMini: q('res-mini'),
       modal: q('modal'),

@@ -48,5 +48,24 @@
     return LIST.filter(function (p) { return p.id === id; })[0] || null;
   }
 
-  window.Prizes = { list: LIST, statuses: statuses, progress: progress, byId: byId };
+  /* ---------- титулы игрока (растут от общего числа огурцов) ---------- */
+  var RANKS = [
+    { need: 0,   title: 'Новичок грядки',      emoji: '🌱' },
+    { need: 10,  title: 'Хрустящий',           emoji: '🥒' },
+    { need: 30,  title: 'Чистильщик',          emoji: '✨' },
+    { need: 70,  title: 'Мастер шкуродёр',     emoji: '🏆' },
+    { need: 140, title: 'Огуречный легенда',   emoji: '👑' }
+  ];
+
+  function rankFor(totalCukes) {
+    var cur = RANKS[0], next = null;
+    for (var i = 0; i < RANKS.length; i++) {
+      if (totalCukes >= RANKS[i].need) cur = RANKS[i];
+      else { next = RANKS[i]; break; }
+    }
+    var pct = next ? clamp((totalCukes - cur.need) / (next.need - cur.need), 0, 1) : 1;
+    return { title: cur.title, emoji: cur.emoji, need: cur.need, next: next, pct: pct };
+  }
+
+  window.Prizes = { list: LIST, statuses: statuses, progress: progress, byId: byId, rankFor: rankFor };
 })();

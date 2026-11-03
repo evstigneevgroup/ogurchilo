@@ -11,6 +11,10 @@
     lastScore: 0,
     lastCukes: 0,
     claimed: {},    // id приза -> true
+    rankNeed: 0,    // need титула, поздравление с которым уже показали
+    streak: 0,      // дней подряд с выполненным заданием
+    lastDoneDate: '',
+    daily: null,    // {date, quest, done}
     sound: true
   };
 
