@@ -317,8 +317,24 @@
     } catch (e) { done(); }
   }
 
-  /* ---------- конец раунда ---------- */
+  /* ---------- конец раунда: финишный кадр → результат ---------- */
+  var FINISH_WORDS = ['ХРУСТ-ФИНИШ!', 'ВСЁ, ЧИСТО!', 'ФИНИШИНА!', 'ОГУРЕЦ ЗАЧИЩЕН!', 'ХРУСТ-КОНЕЦ!'];
+
   Game.onRoundEnd(function (res) {
+    showFinishSplash(function () { settleRound(res); });
+  });
+
+  function showFinishSplash(done) {
+    el.finishText.textContent = FINISH_WORDS[Math.floor(Math.random() * FINISH_WORDS.length)];
+    el.overlayFinish.classList.add('show');
+    /* пауза-кадр: пользователь выдыхает, только потом цифры */
+    setTimeout(function () {
+      el.overlayFinish.classList.remove('show');
+      done();
+    }, 1500);
+  }
+
+  function settleRound(res) {
     var store = Store.state;
     var isRecord = res.score > store.best;
     if (isRecord) store.best = res.score;
@@ -349,7 +365,7 @@
 
     refreshBadge(freshReady);
     if (freshReady > 0) toast('🎁 Доступен новый приз — загляни в «Призы»!');
-  });
+  }
 
   /* плавный счёт до значения (экран результата) */
   function animateNum(node, to, ms) {
@@ -408,6 +424,8 @@
       prizesProgress: q('prizes-progress'),
       prizesBar: q('prizes-bar'),
       overlayResult: q('overlay-result'),
+      overlayFinish: q('overlay-finish'),
+      finishText: q('finish-text'),
       resScore: q('res-score'),
       resCukes: q('res-cukes'),
       resBest: q('res-best'),

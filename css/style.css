@@ -236,6 +236,16 @@ body {
 }
 .overlay.show { display: flex; }
 
+/* финишный кадр */
+.overlay.finish.show { background: rgba(59, 143, 35, .95); }
+.finish-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; animation: pop .22s ease; }
+.finish-cuke { font-size: 88px; line-height: 1; animation: bob .7s ease-in-out infinite; filter: drop-shadow(0 10px 0 rgba(18, 44, 8, .25)); }
+.finish-text {
+  color: #fffdf5; font-size: clamp(34px, 10vw, 56px);
+  font-weight: 900; letter-spacing: -.5px; text-align: center;
+  text-shadow: 0 5px 0 rgba(18, 44, 8, .35);
+}
+
 .panel {
   width: min(340px, calc(100% - 56px));   /* мёртвые зоны по краям: случайный тап мимо кнопок */
   background: var(--card); border-radius: 22px;
