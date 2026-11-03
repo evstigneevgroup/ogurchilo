@@ -55,38 +55,50 @@
       });
     },
 
-    /* шаринг результата в ленту/чаты площадки */
-    share: function (text) {
+    /* мы реально внутри Telegram-вебвью (есть initData)? */
+    inTG: function () {
+      try {
+        var tg = window.Telegram && window.Telegram.WebApp;
+        return !!(tg && tg.initData && String(tg.initData).length > 0);
+      } catch (e) { return false; }
+    },
+
+    /* шаринг результата: в Telegram — выбор чата, в браузере — системный шеринг,
+       на десктопе — копирование. onDone(status): tg | shared | copied | failed */
+    share: function (text, onDone) {
+      var done = onDone || function () {};
       var self = this;
-      if (self.name === 'telegram') {
-        var ok = safe(function () {
-          var w = window.Telegram.WebApp;
-          if (w.openTelegramLink) {
-            w.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent('https://t.me/') +
-              '&text=' + encodeURIComponent(text));
-            return true;
-          }
-          return false;
+      var tg = window.Telegram && window.Telegram.WebApp;
+
+      if (self.inTG() && tg && tg.openTelegramLink) {
+        var opened = safe(function () {
+          tg.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent('https://t.me/ogurchilo_bot') +
+            '&text=' + encodeURIComponent(text));
+          return true;
         }, false);
-        if (ok) return;
-      } else if (self.name === 'vk') {
-        safe(function () { window.vkBridge.send('VKWebAppShare', { link: location.href }); });
+        done(opened ? 'tg' : 'failed');
         return;
       }
-      /* веб-фолбэк: navigator.share либо копирование в буфер */
+
       if (navigator.share) {
-        navigator.share({ title: 'Огурчило', text: text, url: location.href }).catch(function () {});
+        try {
+          navigator.share({ title: 'Огурчило', text: text, url: 'https://evstigneevgroup.github.io/ogurchilo/' })
+            .then(function () { done('shared'); })
+            .catch(function () { done('failed'); });
+        } catch (e) { done('failed'); }
         return;
       }
-      safe(function () {
+
+      var copied = safe(function () {
         var ta = document.createElement('textarea');
-        ta.value = text + ' ' + location.href;
+        ta.value = text + ' — https://t.me/ogurchilo_bot';
         document.body.appendChild(ta);
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        if (window.UI && UI.toast) UI.toast('Текст скопирован — вставь в чат!');
-      });
+        return true;
+      }, false);
+      done(copied ? 'copied' : 'failed');
     }
   };
 

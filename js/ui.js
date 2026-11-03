@@ -284,8 +284,20 @@
   /* ---------- шаринг ---------- */
   function shareResult() {
     var s = Store.state;
-    Platform.share('Я почистил ' + s.lastCukes + ' огурцов и набрал ' + s.lastScore +
-      ' очков в «Огурчиле» 🥒 Побьёшь?');
+    var text = 'Я почистил ' + (s.lastCukes || 0) + ' огурцов и набрал ' + (s.lastScore || 0) +
+      ' очков в «Огурчиле» 🥒 Побьёшь меня?';
+    Platform.share(text, function (status) {
+      if (status === 'tg') {
+        toast('Открываю окно отправки — выбери чат друга!');
+      } else if (status === 'copied') {
+        toast('Текст скопирован — вставь его другу в чат!');
+      } else if (status === 'failed') {
+        modal('Поделиться', 'Автоотправка не открылась.\n\nТвой результат: ' + (s.lastScore || 0) +
+          ' очков. Скинь другу ссылку: t.me/ogurchilo_bot');
+      } else {
+        modal('Поделиться', 'Готово — ждём друга в «Огурчиле» 🥒');
+      }
+    });
   }
 
   /* ---------- инициализация ---------- */
