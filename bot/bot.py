@@ -62,6 +62,13 @@ def send_text(chat_id: int, text: str) -> None:
         print(f"[!] sendMessage error: {e}", flush=True)
 
 
+def code_of(entry):
+    """Код из элемента пула: строка (старый формат) или {code, name, store}."""
+    if isinstance(entry, dict):
+        return entry.get('code')
+    return entry
+
+
 def handle_claim(user_id: int, chat_id: int, username: str, prize_id: str) -> None:
     pool = load_json(POOL_PATH, {})
     issued = load_json(STATE_PATH, {})
@@ -74,21 +81,29 @@ def handle_claim(user_id: int, chat_id: int, username: str, prize_id: str) -> No
 
     if prize_id in mine:
         send_text(chat_id, f"Ты уже забирал «{TITLES[prize_id]}».\n"
-                           f"Твой код: <code>{mine[prize_id]}</code>")
+                           f"Твой код: <code>{code_of(mine[prize_id])}</code>")
         return
 
     queue = pool.get(prize_id) or []
-    used = [v.get("code") for v in issued.values() if prize_id in v]
-    free = [c for c in queue if c not in used]
+    used = [code_of(v.get(prize_id)) for v in issued.values() if prize_id in v]
+    free = [c for c in queue if code_of(c) not in used]
     if not free:
         send_text(chat_id, "Коды на этот приз пока закончились — загляни позже! 🥒")
         return
 
-    code = free[0]
-    mine[prize_id] = code
+    entry = free[0]
+    code = code_of(entry)
+    if isinstance(entry, dict):
+        name = entry.get('name') or TITLES[prize_id]
+        store = entry.get('store') or ''
+    else:
+        name, store = TITLES[prize_id], ''
+
+    mine[prize_id] = {'code': code, 'name': name, 'store': store}
     issued[key] = mine
     save_json(STATE_PATH, issued)
-    send_text(chat_id, f"🎁 <b>{TITLES[prize_id]}</b>\n"
+    head = f"🎁 <b>{name}</b>" + (f" — {store}" if store else '')
+    send_text(chat_id, f"{head}\n"
                        f"Твой промокод: <code>{code}</code>\n\n"
                        f"Спасибо, что чистишь огурцы!")
 

@@ -7,10 +7,10 @@
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
 
   var LIST = [
-    { id: 'coffee', needCukes: 2,  title: 'Хрустящий старт',   desc: 'Кофе в подарок',              partner: 'БодриКофе', code: 'OGUR-CAF-2026' },
-    { id: 'food',   needCukes: 6,  title: 'Чистильщик',        desc: 'Промокод на 300 ₽',           partner: 'Едаля',     code: 'OGUR-EDAL-300' },
-    { id: 'cinema', needCukes: 15, title: 'Шкуродёр',          desc: 'Два билета в кино',           partner: 'Кинобаза',  code: 'OGUR-CIN-2X1' },
-    { id: 'merch',  needCukes: 30, title: 'Огуречная легенда', desc: 'Футболка «Я чищу огурцы»',    partner: 'Огурчило',  code: null }
+    { id: 'coffee', needCukes: 2,  title: 'Хрустящий старт',   desc: 'Купон на кофе от партнёра',        partner: 'Mitgo · Admitad', code: 'OGUR-CAF-2026' },
+    { id: 'food',   needCukes: 6,  title: 'Чистильщик',        desc: 'Купон на доставку/продукты',      partner: 'Mitgo · Admitad', code: 'OGUR-EDAL-300' },
+    { id: 'cinema', needCukes: 15, title: 'Шкуродёр',          desc: 'Купоны на кино и стриминги',       partner: 'Mitgo · Admitad', code: 'OGUR-CIN-2X1' },
+    { id: 'merch',  needCukes: 30, title: 'Огуречная легенда', desc: 'Футболка «Я чищу огурцы»',         partner: 'Огурчило',        code: null }
   ];
 
   function statuses(totalCukes, claimedMap) {
