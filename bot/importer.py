@@ -54,15 +54,33 @@ def http_json(url: str, data=None, headers=None, timeout: int = 30):
 def get_token() -> str:
     cid = env_val('ADMITAD_CLIENT_ID')
     csec = env_val('ADMITAD_CLIENT_SECRET')
+    b64 = env_val('ADMITAD_BASE64_HEADER')
+    if not cid and b64:
+        raw = base64.b64decode(b64.removeprefix('Basic ')).decode('utf-8')
+        cid, csec = raw.split(':', 1)
     if not cid or not csec:
-        raise SystemExit('Нет ADMITAD_CLIENT_ID / ADMITAD_CLIENT_SECRET в .env')
-    basic = base64.b64encode(f'{cid}:{csec}'.encode()).decode()
-    body = urllib.parse.urlencode({'grant_type': 'client_credentials'}).encode()
-    data = http_json('https://api.admitad.com/token/', data=body, headers={
-        'Authorization': 'Basic ' + basic,
-        'Content-Type': 'application/x-www-form-urlencoded',
-    })
-    return data['access_token']
+        raise SystemExit('Нет учётных данных: ADMITAD_BASE64_HEADER или ADMITAD_CLIENT_ID/SECRET в .env')
+
+    scopes = ['advcampaigns_for_website coupons_for_website', 'advcampaigns_for_website']
+    last_err = None
+    for scope in scopes:
+        body = urllib.parse.urlencode({
+            'grant_type': 'client_credentials',
+            'client_id': cid,
+            'client_secret': csec,
+            'scope': scope,
+        }).encode()
+        try:
+            data = http_json('https://api.admitad.com/token/', data=body, headers={
+                'Content-Type': 'application/x-www-form-urlencoded',
+            })
+            if 'access_token' in data:
+                print('токен ok, scope:', scope)
+                return data['access_token']
+            last_err = str(data)[:120]
+        except Exception as e:
+            last_err = str(e)[:120]
+    raise SystemExit('Не удалось получить токен: ' + str(last_err))
 
 
 def fetch_coupons(token: str, website_id: str):
@@ -105,14 +123,15 @@ def main() -> int:
     website_id = env_val('ADMITAD_WEBSITE_ID') or '3018210'
     token = get_token()
     coupons = [c for c in fetch_coupons(token, website_id)
-               if c.get('promo_code') and not_expired(c)]
+               if (c.get('promocode') or c.get('promo_code')) and not_expired(c)]
     print(f'купонов с кодами: {len(coupons)}')
 
     pools = {s: [] for s in SLOTS}
     seen = set()
     idx = 0
     for c in coupons:
-        code = (c.get('promo_code') or '').strip()
+        # в API поле называется 'promocode' (в старых версиях 'promo_code')
+        code = (c.get('promocode') or c.get('promo_code') or '').strip()
         if not code or code in seen:
             continue
         seen.add(code)
@@ -121,6 +140,7 @@ def main() -> int:
             'code': code,
             'name': (c.get('name') or 'Купон партнёра').strip()[:90],
             'store': (camp.get('name') or '').strip()[:40],
+            'link': (c.get('goto_link') or '').strip(),   # партнёрская ссылка (CPA-атрибуция)
         }
         pools[slot_for(c, idx)].append(entry)
         idx += 1
